@@ -4,7 +4,7 @@ import domain
 hyp = {
 	"task":"mnist256",
 	"alg_wDist": "standard",
-	"maxGen": 70,
+	"maxGen": 4096,
 	"popSize": 960,
 	"alg_nVals": 6,
 	"alg_nReps": 1,
