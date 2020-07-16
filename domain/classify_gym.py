@@ -70,7 +70,6 @@ class ClassifyEnv():
 		accuracy = (float(np.sum(p==y)) / self.batch)
 		return accuracy
 
-
 # -- Data Sets ----------------------------------------------------------- -- #
 
 def mnist_256():

@@ -10,8 +10,7 @@ class Wann():
 	"""
 
 	''' Subfunctions '''
-	from .variation import evolvePop, recombine, crossover,\
-							mutAddNode, mutAddConn, topoMutate
+	from .variation import evolvePop, recombine, crossover,	mutAddNode, mutAddConn, topoMutate
 
 	def __init__(self, hyp):
 		"""Intialize WANN algorithm with hyperparameters
@@ -40,7 +39,6 @@ class Wann():
 		self.task = Task(games[hyp["task"]])
 
 	def train(self):
-
 		for gen in range(self.p['maxGen']):
 			if len(self.pop) == 0:
 				self.initPop()        # Initialize population
@@ -49,13 +47,13 @@ class Wann():
 				self.evolvePop()      # Create child population
 
 			self.evaluate()           # Send pop to evaluate
+
 			f = sorted(self.pop, reverse=True, key=lambda i: i.fitness)[0].fitness
-			if gen + 1 in [1, 10, 20, 30, 40, 50, 70, 4096] + list(range(100, 10000, 100)):
+			if gen + 1 in [1, 10, 20, 30, 40, 50, 70, 4096] + list(range(100, 10000, 50)):
 				a = self.acculacy()
 				print("gen {} | fitness: {} acculacy: {}".format(gen + 1, f, a))
 			else:
 				print("gen {} | fitness: {}".format(gen + 1, f))
-
 
 	def initPop(self):
 		"""Initialize population with a list of random individuals
