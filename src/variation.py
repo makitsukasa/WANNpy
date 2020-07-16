@@ -47,12 +47,13 @@ def recombine(self, species, innov, gen):
 	p = self.p
 	nOffspring = int(species.nOffspring)
 	pop = species.members
-  children = []
+	children = []
 
-  # Sort by rank
-  pop.sort(key=lambda x: x.rank)
+	# Sort by rank
+	np.random.shuffle(pop)
+	pop.sort(key=lambda x: x.rank)
 
-  # Cull  - eliminate worst individuals from breeding pool
+	# Cull  - eliminate worst individuals from breeding pool
 	numberToCull = int(np.floor(p['select_cullRatio'] * len(pop)))
 	if numberToCull > 0:
 		pop[-numberToCull:] = []
