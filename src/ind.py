@@ -43,12 +43,21 @@ class Ind():
 		self.nOutput = sum(node[1,:]==2)
 		self.wMat    = []
 		self.aVec    = []
-		self.nConn   = []
-		self.fitness = [] # Mean fitness over trials
-		self.fitMax  = [] # Best fitness over trials
-		self.rank    = []
+		self.nConn   = np.nan
+		self.fitness = np.nan # Mean fitness over trials
+		self.fitMax  = np.nan # Best fitness over trials
+		self.rank    = np.nan
 		self.birth   = []
 		self.species = []
+
+	def __eq__(self, other):
+		# if not np.array_equal(self.node, other.node):
+		# 	t = np.logical_not(np.equal(self.conn, other.conn))
+		# 	print(np.where(t), self.node[t], other.node[t])
+		# if not np.allclose(self.conn, other.conn):
+		# 	t = np.logical_not(np.isclose(self.conn, other.conn))
+		# 	print(np.where(t), self.conn[t], other.conn[t])
+		return np.array_equal(self.node, other.node) and np.allclose(self.conn, other.conn)
 
 	def express(self):
 		"""Converts genes to weight matrix and activation vector
@@ -144,7 +153,6 @@ def getNodeOrder(nodeG,connG):
 	Q = np.where(edge_in==0)[0]  # Start with nodes with no incoming connections
 	for i in range(len(connMat)):
 		if (len(Q) == 0) or (i >= len(Q)):
-			Q = []
 			return False, False # Cycle found, can't sort
 		edge_out = connMat[Q[i],:]
 		edge_in  = edge_in - edge_out # Remove nodes' conns from total

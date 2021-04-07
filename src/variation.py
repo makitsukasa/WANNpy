@@ -27,22 +27,21 @@ def recombine(self, species, innov, gen):
 		) Produce new population through crossover and mutation
 
 	Args:
-			species - (Species) -
-				.members    - [Ind] - parent population
-				.nOffspring - (int) - number of children to produce
-			innov   - (np_array)  - innovation record
-								[5 X nUniqueGenes]
-								[0,:] == Innovation Number
-								[1,:] == Source
-								[2,:] == Destination
-								[3,:] == New Node?
-								[4,:] == Generation evolved
-			gen     - (int) - current generation
+		species - (Species) -
+			.members    - [Ind] - parent population
+			.nOffspring - (int) - number of children to produce
+		innov   - (np_array)  - innovation record
+			[5 X nUniqueGenes]
+			[0,:] == Innovation Number
+			[1,:] == Source
+			[2,:] == Destination
+			[3,:] == New Node?
+			[4,:] == Generation evolved
+		gen     - (int) - current generation
 
 	Returns:
-			children - [Ind]      - newly created population
-			innov   - (np_array)  - updated innovation record
-
+		children - [Ind]      - newly created population
+		innov   - (np_array)  - updated innovation record
 	"""
 	p = self.p
 	nOffspring = int(species.nOffspring)
@@ -50,34 +49,32 @@ def recombine(self, species, innov, gen):
 	children = []
 
 	# Sort by rank
-	np.random.shuffle(pop)
 	pop.sort(key=lambda x: x.rank)
 
 	# Cull  - eliminate worst individuals from breeding pool
-	numberToCull = int(np.floor(p['select_cullRatio'] * len(pop)))
+	numberToCull = int(np.floor(len(pop) * p['select_cullRatio']))
 	if numberToCull > 0:
 		pop[-numberToCull:] = []
 
 	# Elitism - keep best individuals unchanged
-	nElites = int(np.floor(len(pop)*p['select_eliteRatio']))
+	nElites = int(np.floor(len(pop) * p['select_eliteRatio']))
 	for i in range(nElites):
 		children.append(pop[i])
-		nOffspring -= 1
+	nOffspring -= nElites
 
 	# Get parent pairs via tournament selection
 	# -- As individuals are sorted by fitness, index comparison is
 	# enough. In the case of ties the first individual wins
 	parentA = np.random.randint(len(pop),size=(nOffspring,p['select_tournSize']))
 	parentB = np.random.randint(len(pop),size=(nOffspring,p['select_tournSize']))
-	parents = np.vstack( (np.min(parentA,1), np.min(parentB,1) ) )
+	parents = np.vstack((np.min(parentA,1), np.min(parentB,1)))
 	parents = np.sort(parents,axis=0) # Higher fitness parent first
 
 	# Breed child population
 	for i in range(nOffspring):
 		if np.random.rand() > p['prob_crossover']:
 			# Mutation only: take only highest fit parent
-			child = Ind(pop[parents[0,i]].conn,\
-									pop[parents[0,i]].node)
+			child = Ind(pop[parents[0,i]].conn, pop[parents[0,i]].node)
 		else:
 			# Crossover
 			child = self.crossover(pop[parents[0,i]], pop[parents[1,i]])
@@ -278,18 +275,18 @@ def mutAddConn(self, connG, nodeG, innov, gen):
 
 		# Add a random valid connection
 		np.random.shuffle(dest)
-		if len(dest)>0:  # (if there is one)
-			connNew = np.empty((5,1))
-			connNew[0] = innov[0,-1]+1 # Increment innovation counter
-			connNew[1] = nodeKey[src,0]
-			connNew[2] = nodeKey[dest[0],0]
+		if len(dest) > 0:  # (if there is one)
+			connNew = np.empty((5, 1))
+			connNew[0] = innov[0, -1]+1 # Increment innovation counter
+			connNew[1] = nodeKey[src, 0]
+			connNew[2] = nodeKey[dest[0], 0]
 			connNew[3] = 1
 			connNew[4] = 1
-			connG = np.c_[connG,connNew]
+			connG = np.c_[connG, connNew]
 
 			# Record innovation
 			newInnov = np.hstack((connNew[0:3].flatten(), -1, gen))
-			innov = np.hstack((innov,newInnov[:,None]))
+			innov = np.hstack((innov, newInnov[:, None]))
 			break
 
 	return connG, innov
@@ -336,8 +333,8 @@ def topoMutate(self,child,innov,gen):
 	nodeG = np.copy(child.node)
 
 	# Choose topological mutation
-	topoRoulette = np.array((p['prob_addConn'], p['prob_addNode'], \
-								p['prob_enable'] , p['prob_mutAct']))
+	topoRoulette = np.array((
+		p['prob_addConn'], p['prob_addNode'], p['prob_enable'] , p['prob_mutAct']))
 
 	spin = np.random.rand()*np.sum(topoRoulette)
 	slot = topoRoulette[0]
@@ -366,7 +363,7 @@ def topoMutate(self,child,innov,gen):
 
 	# Mutate Activation
 	elif choice == 4:
-		start = 1+child.nInput + child.nOutput
+		start = child.nInput + 1 + child.nOutput
 		end = nodeG.shape[1]
 		if start != end:
 			mutNode = np.random.randint(start,end)
@@ -382,5 +379,4 @@ def topoMutate(self,child,innov,gen):
 # -- Utilties ------------------------------------------------------------ -- #
 def listXor(b,c):
 	"""Returns elements in lists b and c that they don't share"""
-	A = [a for a in b+c if (a not in b) or (a not in c)]
-	return A
+	return [a for a in b+c if (a not in b) or (a not in c)]

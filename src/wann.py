@@ -39,6 +39,7 @@ class Wann():
 		self.task = Task(games[hyp["task"]])
 
 	def train(self):
+		seed_a = np.random.randint(4294967296, dtype="int64")
 		for gen in range(self.p['maxGen']):
 			if len(self.pop) == 0:
 				self.initPop()        # Initialize population
@@ -49,8 +50,9 @@ class Wann():
 			self.evaluate()           # Send pop to evaluate
 
 			f = sorted(self.pop, reverse=True, key=lambda i: i.fitness)[0].fitness
-			if gen + 1 in [1, 10, 20, 30, 40, 50, 70, 4096] + list(range(100, 10000, 50)):
-				a = self.acculacy()
+			if gen + 1 in [1, 10, 20, 30, 40, 50, 70, 4096, self.p['maxGen']] + list(range(100, 10000, 50)):
+				# a = self.acculacy(seed_a)
+				a = self.acculacy_all()
 				print("gen {} | fitness: {} acculacy: {}".format(gen + 1, f, a))
 			else:
 				print("gen {} | fitness: {}".format(gen + 1, f))
@@ -83,15 +85,14 @@ class Wann():
 		conn[0,:] = np.arange(0,nConn,1)    # Connection Id
 		conn[1,:] = np.tile(ins, len(outs)) # Source Nodes
 		conn[2,:] = np.tile(outs,len(ins) ) # Destination Nodes
-		conn[3,:] = np.nan                  # Weight Value
+		conn[3,:] = 1                       # Weight Value
 		conn[4,:] = 1                       # Enabled?
 
 		# Create population of individuals (for WANN weight value doesn't matter)
 		pop = []
 		for i in range(self.p['popSize']):
 			newInd = Ind(conn, node)
-			newInd.conn[3,:] = 1 #(2*(np.random.rand(1,nConn)-0.5))*self.p['ann_absWCap']
-			newInd.conn[4,:] = np.random.rand(1,nConn) < self.p['prob_initEnable']
+			newInd.conn[4,:] = np.random.rand(1, nConn) < self.p['prob_initEnable']
 			newInd.express()
 			newInd.birth = 0
 			pop.append(copy.deepcopy(newInd))
@@ -107,18 +108,21 @@ class Wann():
 	def probMoo(self):
 		"""Rank population according to Pareto dominance.
 		"""
-		# Compile objectives
-		meanFit = np.asarray([ind.fitness for ind in self.pop])
-		maxFit  = np.asarray([ind.fitMax  for ind in self.pop])
-		nConns  = np.asarray([ind.nConn   for ind in self.pop])
-		nConns[nConns==0] = 1 # No conns is always pareto optimal (but boring)
-		objVals = np.c_[meanFit,maxFit,1/nConns] # Maximize
 
 		# Alternate second objective
 		if self.p['alg_probMoo'] < np.random.rand():
-			rank = nsga_sort(objVals[:,[0,1]])
+			# Compile objectives
+			meanFit = np.asarray([ind.fitness for ind in self.pop])
+			maxFit  = np.asarray([ind.fitMax  for ind in self.pop])
+			objVals = np.c_[meanFit, maxFit]
+			rank = nsga_sort(objVals)
 		else:
-			rank = nsga_sort(objVals[:,[0,2]])
+			# Compile objectives
+			meanFit = np.asarray([ind.fitness for ind in self.pop])
+			nConns  = np.asarray([ind.nConn   for ind in self.pop])
+			nConns[nConns==0] = 1 # No conns is always pareto optimal (but boring)
+			objVals = np.c_[meanFit, 1/nConns] # Maximize
+			rank = nsga_sort(objVals)
 
 		# Assign ranks
 		for i in range(len(self.pop)):
@@ -134,10 +138,6 @@ class Wann():
 			.aVec - (np_array) - activation function of each node
 					[N X 1]
 
-
-		Optional:
-			sameSeedForEachIndividual - (bool) - use same seed for each individual?
-
 		Return:
 			reward  - (np_array) - fitness value of each individual
 					[N X 1]
@@ -146,19 +146,21 @@ class Wann():
 			* Asynchronous evaluation instead of batches
 		"""
 
-		reward = np.empty((len(self.pop), self.p['alg_nVals']), dtype=np.float64)
 		for i in range(len(self.pop)):
 			wVec   = self.pop[i].wMat.flatten()
 			aVec   = self.pop[i].aVec.flatten()
 			result = self.task.getFitness(self.p, wVec, aVec)
-			reward[i, :] = result
+			self.pop[i].fitness = np.mean(result)
+			self.pop[i].fitMax = np.max(result)
 
-		for i in range(len(self.pop)):
-			self.pop[i].fitness = np.mean(reward[i, :])
-			self.pop[i].fitMax = np.max(reward[i, :])
+	def acculacy(self, seed = None):
+		ind = sorted(self.pop, key=lambda i: i.fitness, reverse=True)[0]
+		wVec = ind.wMat.flatten()
+		return np.mean(self.task.getAcculacy(self.p, wVec, ind.aVec, False, seed)),\
+			np.mean(self.task.getAcculacy(self.p, wVec, ind.aVec, True, seed))
 
-	def acculacy(self):
-		ind = sorted(self.pop, reverse=True, key=lambda i: i.fitness)[0]
-		wVec   = ind.wMat.flatten()
-		aVec   = ind.aVec.flatten()
-		return self.task.calcAccuracy(wVec, aVec, False), self.task.calcAccuracy(wVec, aVec, True)
+	def acculacy_all(self, seed = None):
+		ind = sorted(self.pop, key=lambda i: i.fitness, reverse=True)[0]
+		wVec = ind.wMat.flatten()
+		return self.task.getAcculacy(self.p, wVec, ind.aVec, False, seed),\
+			self.task.getAcculacy(self.p, wVec, ind.aVec, True, seed)

@@ -21,7 +21,7 @@ class Task():
 		self.actRange = game.h_act
 		self.absWCap  = game.weightCap
 		self.layers   = game.layers
-		self.activations = np.r_[np.full(1,1),game.i_act,game.o_act]
+		self.activations = np.r_[np.full(1,1), game.i_act, game.o_act]
 
 		# Environment
 		self.maxEpisodeLength = game.max_episode_length
@@ -113,7 +113,7 @@ class Task():
 		return wMat
 
 	def getFitness(self, hyp, wVec, aVec, \
-					seed=-1,nRep=False,nVals=6,returnVals=False):
+					seed=-1,nRep=False,returnVals=False):
 		"""Get fitness of a single individual with distribution of weights
 
 		Args:
@@ -128,7 +128,6 @@ class Task():
 		Optional:
 			seed    - (int)      - starting random seed for trials
 			nReps   - (int)      - number of trials to get average fitness
-			nVals   - (int)      - number of weight values to test
 
 
 		Returns:
@@ -137,15 +136,8 @@ class Task():
 
 		if nRep is False:
 			nRep = hyp['alg_nReps']
-
-		# Set weight values to test WANN with
-		if (hyp['alg_wDist'] == "standard") and nVals==6: # Double, constant, and half signal
-			wVals = np.array((-2,-1.0,-0.5,0.5,1.0,2))
-		elif (hyp['alg_wDist'] == "random"):
-			wVals = np.random.rand(nVals) * 4 - 2
-		else:
-			wVals = np.linspace(-self.absWCap, self.absWCap ,nVals)
-
+		nVals = hyp['alg_nVals']
+		wVals = self.get_wVals(hyp['alg_wDist'], nVals)
 
 		# Get reward from 'reps' rollouts -- test population on same seeds
 		reward = np.empty((nRep,nVals))
@@ -153,13 +145,45 @@ class Task():
 			for iVal in range(nVals):
 				wMat = self.setWeights(wVec, wVals[iVal])
 				if seed == -1:
-					reward[iRep,iVal] = self.calcReward(wVec, aVec, seed=seed)
+					reward[iRep,iVal] = self.calcReward(wMat, aVec, seed=seed)
 				else:
-					reward[iRep,iVal] = self.calcReward(wVec, aVec, seed=seed+iRep)
+					reward[iRep,iVal] = self.calcReward(wMat, aVec, seed=seed+iRep)
 
 		if returnVals is True:
 			return np.mean(reward,axis=0), wVals
 		return np.mean(reward,axis=0)
 
-	def getAcculacy(self, wVec, aVec):
-		return self.env.accuracy(wVec, aVec)
+	def getAcculacy(self, hyp, wVec, aVec, test, seed=None):
+		if seed is not None:
+			np.random.seed(seed)
+
+		nVals = hyp['alg_nVals']
+		wVals = self.get_wVals(hyp['alg_wDist'], nVals)
+
+		acculacy = np.empty(nVals)
+		for iVal in range(nVals):
+			wMat = self.setWeights(wVec, wVals[iVal])
+			acculacy[iVal] = self.calcAccuracy(wMat, aVec, test)
+
+		return acculacy
+
+	def get_wVals(self, alg_wDist, alg_nVals):
+		# Set weight values to test WANN with
+		if (alg_wDist == "standard") and alg_nVals == 6: # Double, constant, and half signal
+			return np.array((-2.0, -1.0, -0.5, 0.5, 1.0, 2.0))
+		if (alg_wDist == "standard") and alg_nVals == 2:
+			return np.array((-2.0, 2.0))
+		elif (alg_wDist == "positive" and alg_nVals == 6):
+			return np.array((0.5, 0.75, 1.0, 1.25, 1.5, 2.0))
+		elif (alg_wDist == "positive" and alg_nVals == 3):
+			return np.array((0.5, 1.0, 2.0))
+		elif (alg_wDist == "positive" and alg_nVals == 1):
+			return np.array((1.0))
+		elif (alg_wDist == "random"):
+			wVals = np.random.rand(alg_nVals) * 3 - 1.5
+			return [w - 0.5 if w < 0 else w + 0.5 for w in wVals]
+		elif (alg_wDist == "symmetricrandom"):
+			wVals = np.random.rand(alg_nVals // 2) * 1.5 + 0.5
+			return np.append(wVals, -wVals)
+		else:
+			return np.linspace(-self.absWCap, self.absWCap, alg_nVals)

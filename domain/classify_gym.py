@@ -29,7 +29,7 @@ class ClassifyEnv():
 
 	def reset(self):
 		''' Initialize State'''
-		#print('Lucky number', np.random.randint(10)) # same randomness?
+		# print('Lucky number', np.random.randint(10)) # same randomness?
 		self.trainOrder = np.random.permutation(len(self.target))
 		self.t = 0 # timestep
 		self.currIndx = self.trainOrder[self.t:self.t+self.batch]
@@ -54,8 +54,8 @@ class ClassifyEnv():
 			done = False
 			if self.t >= self.t_limit:
 				done = True
-			self.currIndx = self.trainOrder[(self.t*self.batch):\
-								(self.t*self.batch + self.batch)]
+			self.currIndx = self.trainOrder[
+				(self.t*self.batch):(self.t*self.batch + self.batch)]
 
 			self.state = self.trainSet[self.currIndx,:]
 		else:
@@ -73,27 +73,29 @@ class ClassifyEnv():
 # -- Data Sets ----------------------------------------------------------- -- #
 
 def mnist_256():
+	import os
 	'''
 	Converts 28x28 mnist digits to [16x16]
 	[samples x pixels]  ([N X 256])
 	'''
-	with open("domain/mnist/data/train_img.csv") as f:
+	with open(os.path.abspath(os.path.dirname(__file__)) + "/mnist/data/train_img.csv") as f:
 		reader = csv.reader(f, delimiter = " ")
 		img = np.array([[float(v) for v in row] for row in reader])
-	with open("domain/mnist/data/train_label.csv") as f:
+	with open(os.path.abspath(os.path.dirname(__file__)) + "/mnist/data/train_label.csv") as f:
 		reader = csv.reader(f, delimiter = " ")
 		label = np.array([int(row[0]) for row in reader])
 	return img, label
 
 def mnist_256_test():
+	import os
 	'''
 	Converts 28x28 mnist digits to [16x16]
 	[samples x pixels]  ([N X 256])
 	'''
-	with open("domain/mnist/data/test_img.csv") as f:
+	with open(os.path.abspath(os.path.dirname(__file__)) + "/mnist/data/test_img.csv") as f:
 		reader = csv.reader(f, delimiter = " ")
 		img = np.array([[float(v) for v in row] for row in reader])
-	with open("domain/mnist/data/test_label.csv") as f:
+	with open(os.path.abspath(os.path.dirname(__file__)) + "/mnist/data/test_label.csv") as f:
 		reader = csv.reader(f, delimiter = " ")
 		label = np.array([int(row[0]) for row in reader])
 	return img, label
